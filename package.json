@@ -1,0 +1,23 @@
+{
+  "name": "planet",
+  "version": "2.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "shortTest": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "leBukii",
+  "license": "ISC",
+  "dependencies": {
+    "chai": "^4.1.2",
+    "discord.js": "^11.1.0",
+    "document": "^0.4.7",
+    "ffmpeg-binaries": "^3.2.2-3",
+    "fs": "0.0.1-security",
+    "get-youtube-id": "^1.0.0",
+    "opusscript": "0.0.3",
+    "request": "^2.81.0",
+    "youtube-info": "^1.1.1",
+    "ytdl-core": "^0.16.0"
+  }
+}
