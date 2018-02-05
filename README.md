@@ -1,3 +1,2 @@
 # planet
 Discord-Bot
-wumpus
