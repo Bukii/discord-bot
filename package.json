@@ -1,12 +1,12 @@
 {
   "name": "planet",
-  "version": "2.0",
+  "version": "1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "shortTest": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "leBukii",
+  "author": "Lukas",
   "license": "ISC",
   "dependencies": {
     "chai": "^4.1.2",
