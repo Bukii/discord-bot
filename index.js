@@ -12,6 +12,8 @@ var queue = [];
 var dispatcher = null;
 let channel;
 var currentsong = null;
+var ableToPlayMusic = true;
+var counter = 1;
 
 // get the whole information of settings.json
 var config = JSON.parse(fs.readFileSync('./settings.json', 'utf-8'));
@@ -26,6 +28,11 @@ const game = presence.game;
 const status = presence.status;
 var volume = presence.volume;
 
+// read some other guild information
+var utils = JSON.parse(fs.readFileSync('./utils.json', 'utf-8'));
+const verified_role = utils.verified_role;
+const member_role = utils.member_role;
+
 bot.on('ready', (ready) => {
     bot.user.setPresence({ game: { name: game, type: 3 }, status: status })
     console.log(`Logged in as ${bot.user.tag}!`)
@@ -38,6 +45,12 @@ bot.on('ready', (ready) => {
         .catch(console.error);
 });
 
+bot.on('guildMemberAdd', function (member) {
+    member.addRole(member.guild.roles.find("name", member_role))
+        .then(console.log(member.displayName + ', joined the server.'));
+    member.sendMessage('welcome to the server. Have a nice time. :wink:');
+});
+
 bot.on('message', function (message) {
     const msg = message.content.toLowerCase();                  // entire message
     const args = message.content.split(' ').slice(1).join(" "); // splits at the first blank space
@@ -45,42 +58,44 @@ bot.on('message', function (message) {
     const youtube = bot.emojis.find("name", "youtube");         // youtube emoji
 
     // role = Verified
-    if (message.channel.name == 'bot' && !message.member.roles.has(message.guild.roles.find("name", "Verified").id)) {
+    if (message.channel.name == 'bot' && message.member.roles.has('270940160366084097')) {
         // Play a song
         // Or if currently playing a song
         // add to the queue
         if (msg.startsWith(prefix + 'play')) {
-            // If a song is current playing the bot will save it to the queue
-            if (queue.length > 0 || isPlaying == true) {
-                if (args.indexOf('wwww.youtube.com')) {
-                    getID(args, function (id) {
-                        add_to_queue(id);
-                        currentsong = id;
-                        embed(message);
-                        console.log(queue.length + '');
-                    });
-                }
-                else {
-                    message.reply('unknown youtube link!');
-                }
-            }
-            // Else if no song is current playing the bot starts with the song
-            else {
-                if (args.indexOf('wwww.youtube.com')) {
-                    isPlaying = true;
-                    getID(args, function (id) {
-                        queue.push("placeholder");
-                        playMusic(id, message);
-                        message.reply(' your song(s) has been added to the queue.');
-                        fetchVideoInfo(id).then(function (videoInfo) {
-                            message.channel.send('**Playing: ** :notes: `' + videoInfo.title + '` - Now!');
+            if (ableToPlayMusic) {
+                // If a song is current playing the bot will save it to the queue
+                if (queue.length > 0 || isPlaying == true) {
+                    if (args.indexOf('wwww.youtube.com')) {
+                        getID(args, function (id) {
+                            add_to_queue(id);
+                            embed(id, message);
+                            console.log(queue.length + '');
                         });
-                    });
-                    console.log(queue.length + '');
+                    }
+                    else {
+                        message.reply('unknown youtube link!');
+                    }
                 }
+                // Else if no song is current playing the bot starts with the song
                 else {
-                    message.reply('unknown youtube link!');
+                    if (args.indexOf('wwww.youtube.com')) {
+                        isPlaying = true;
+                        getID(args, function (id) {
+                            queue.push("placeholder");
+                            setTimeout(() => playMusic(id, message), 200);
+                            fetchVideoInfo(id).then(function (videoInfo) {
+                                message.channel.send('**Playing: ** :notes: `' + videoInfo.title + '` - Now!');
+                            });
+                        });
+                        console.log(queue.length + '');
+                    }
+                    else {
+                        message.reply('unknown youtube link!');
+                    }
                 }
+            } else {
+                message.reply('I am not able to play some music... ehhhckr!');
             }
         }
         // The bot send you an embed where you can see the whole queue
@@ -104,13 +119,8 @@ bot.on('message', function (message) {
         // Or
         // Stop the stream
         else if (msg.startsWith(prefix + 'stop')) {
-            if (message.member.voiceChannel.equals(channel)) {
-                stop_song();
-                message.channel.send(':x: **Stopped the stream!**');
-            }
-            else {
-                message.reply('You are not in the same channel!');
-            }
+            stop_song();
+            message.channel.send(':x: **Stopped the stream!**');
         }
         // Move the Bot to your channel or in the channel you wrote right next to !move
         // If you are not in a channel, the bot doesn't move
@@ -147,7 +157,7 @@ bot.on('message', function (message) {
         // There are information like e.g: Title, Owner, Duration, Views, etc.
         else if (msg.startsWith(prefix + 'info')) {
             if (isPlaying == true) {
-                embed(message);
+                embed(currentsong, message);
             }
             else {
                 message.reply("I don't play a song atm");
@@ -164,16 +174,14 @@ bot.on('message', function (message) {
             dispatcher.resume();
         }
         // change volume
-        // either you choose
-        // or volume + 1
         else if (msg.startsWith(prefix + "volume")) {
             if (msg.length > 7) {
-                volume = args/10;
+                volume = args / 10;
             } else {
                 message.reply('Type what volume do you want!');
             }
             console.log(volume);
-            message.channel.send('Volume set to _' + volume*100 + '%_ :muscle:');
+            message.channel.send('Volume set to _' + volume * 100 + '%_ :muscle:');
         }
         // Delete as much messages as you want
         // Just for Owner
@@ -189,6 +197,11 @@ bot.on('message', function (message) {
                 console.log(message.author.username + ' tried to delete messages!');
             }
         }
+        // Just a test command to handle some wip functions
+        else if (msg.startsWith(prefix + "test")) {
+            if (message.member.id != bot_controller) { message.channel.send('Successful!').then(console.log('Test successfully executed!')); }
+            else { message.reply("you don't have the permission to do that!"); }
+        }
     }
     // Bot reacts on messages in the support channel
     // If the message on which the bot is reacting is written by a Supporter
@@ -202,10 +215,18 @@ bot.on('message', function (message) {
             message.react('😋');
         }
     }
-    // Christmas Update
-    else if (!message.author.username.startsWith(":christmas_tree:")) {
-        if (message.author.id != bot_controller) {
-            message.guild.members.get(member).setNickname('🎄' + message.author.username);
+    // register
+    else if (message.channel.name == 'global') {
+        // register
+        if (msg.startsWith(prefix + "register")) {
+            if (!message.member.roles.has(message.guild.roles.find("name", verified_role).id)) {
+                //insertIntoDB(message.author);
+                message.member.addRole(message.guild.roles.find("name", verified_role))
+                    .then(console.log('Role "Verified" given to ' + message.member.displayName));
+                message.channel.send('You are now verified!');
+            } else if (message.member.roles.has(message.guild.roles.find("name", verified_role).id)) {
+                message.reply('you are already verified! :money_mouth:');
+            }
         }
     }
 });
@@ -244,17 +265,14 @@ function playMusic(id, message) {
             stream = ytdl("https://www.youtube.com/watch?v=" + id, {
                 filter: 'audioonly'
             });
-            console.log('song');
             currentsong = id;
-            dispatcher = connection.playStream(stream); 
-            console.log('stream');
-            dispatcher.setVolume(volume); 
-            console.log('volume');
-            dispatcher.on('end', function () {
-                console.log('end');
+            dispatcher = connection.playStream(stream);
+            dispatcher.setVolume(volume);
+            dispatcher.on('end', () => {
+                console.log('Finished playing!');
                 queue.shift();
-                if (queue.length > 0) playMusic(queue[0], message), console.log('playing');
-                else { queue = []; isPlaying = false; console.log('isPlaying = false'); }
+                if (queue.length > 0) { playMusic(queue[0], message) }
+                else { queue = []; isPlaying = false; }
             });
         })
         .catch(console.error);
@@ -304,8 +322,8 @@ function isYoutube(str) {
 // Creates an embed 
 // fills the embed
 // reply with the embed
-function embed(message) {
-    fetchVideoInfo(currentsong).then(function (videoInfo) {
+function embed(song, message) {
+    fetchVideoInfo(song).then(function (videoInfo) {
         var embed = new Discord.RichEmbed()
         embed.setTitle("Current playing song!")
         embed.setAuthor("", message.author.avatarURL)
@@ -313,11 +331,53 @@ function embed(message) {
         embed.setDescription(videoInfo.title)
         embed.setThumbnail(videoInfo.thumbnailUrl)
         embed.addField("Channel", videoInfo.owner, true)
-        embed.addField("Duration", videoInfo.duration, true)
+        embed.addField("Duration", (videoInfo.duration / 60).toFixed(2) + " min", true)
         embed.addField("Views", videoInfo.views, true)
         embed.addField("Publishing date", videoInfo.datePublished, true)
         message.channel.send({ embed });
     });
+}
+
+// Database
+function insertIntoDB(member) {
+    var Properties = Java.type("java.util.Properties");
+    var Driver = Java.type("org.h2.Driver");
+
+    var driver = new Driver();
+    var properties = new Properties();
+
+    properties.setProperty("user", "sa");
+    properties.setProperty("password", "");
+
+    try {
+        var conn = driver.connect(
+            "jdbc:h2:~/member", properties);
+
+        // Database code here
+        try {
+            var stmt = conn.createStatement("INSERT INTO MEMBER VALUES(" + counter + ", '" + member.username + 
+            "', '" + msg.member.discriminator + "', " + msg.member.id);
+            var rs = stmt.execute();
+        }
+        finally {
+            if (rs)
+                try {
+                    rs.close();
+                }
+                catch(e) {}
+         
+            if (stmt)
+                try {
+                    stmt.close();
+                }
+                catch(e) {}
+        }
+    }
+    finally {
+        try {
+            if (conn) conn.close();
+        } catch (e) { }
+    }
 }
 
 // This "function" is written for the bot to login into Discord
